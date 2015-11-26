@@ -6,10 +6,10 @@
 #include "windows.h"
 
 #define MAX_LOADSTRING 100
-#define ID_BTN_SEND			1
-#define ID_BTN_POST			2
-#define ID_BTN_POST_THREAD	3
-#define ID_LISTBOX			4
+#define ID_BTN_SEND			111
+#define ID_BTN_POST			222
+#define ID_BTN_POST_THREAD	333
+#define ID_LISTBOX			444
 
 #define WM_SEND				(WM_USER + 1)
 #define WM_POST				(WM_USER + 2)
@@ -125,7 +125,19 @@ BOOL InitInstance(HINSTANCE hInstance, int nCmdShow)
    hInst = hInstance; // Store instance handle in our global variable
 
    hWnd = CreateWindow(szWindowClass, szTitle, WS_OVERLAPPEDWINDOW,
-      CW_USEDEFAULT, 0, CW_USEDEFAULT, 0, NULL, NULL, hInstance, NULL);
+      CW_USEDEFAULT, 0, 450, 350, NULL, NULL, hInstance, NULL);
+
+   CreateWindowEx(WS_EX_STATICEDGE, "BUTTON", "SendMessage", WS_CHILD | WS_VISIBLE,
+	   280, 10, 150, 25, hWnd, (HMENU)ID_BTN_SEND, hInstance, NULL);
+
+   CreateWindowEx(WS_EX_STATICEDGE, "BUTTON", "PostMessage", WS_CHILD | WS_VISIBLE,
+	   280, 40, 150, 25, hWnd, (HMENU)ID_BTN_POST, hInstance, NULL);
+
+   CreateWindowEx(WS_EX_STATICEDGE, "BUTTON", "Post Thread Message", WS_CHILD | WS_VISIBLE,
+	   280, 70, 150, 25, hWnd, (HMENU)ID_BTN_POST_THREAD, hInstance, NULL);
+
+   CreateWindowEx(WS_EX_STATICEDGE, "LISTBOX", "", WS_CHILD | WS_VISIBLE,
+	   10, 10, 260, 260, hWnd, (HMENU)ID_LISTBOX, hInstance, NULL);
 
    if (!hWnd)
    {
@@ -156,6 +168,12 @@ LRESULT CALLBACK WndProc(HWND hWnd, UINT message, WPARAM wParam, LPARAM lParam)
 
 	switch (message)
 	{
+	case ID_BTN_SEND:
+		break;
+	case ID_BTN_POST:
+		break;
+	case ID_BTN_POST_THREAD:
+		break;
 	case WM_COMMAND:
 		wmId    = LOWORD(wParam);
 		wmEvent = HIWORD(wParam);
@@ -194,26 +212,11 @@ LRESULT CALLBACK ThreadWndProc(HWND hWnd, UINT message, WPARAM wParam, LPARAM lP
 
 	switch (message)
 	{
-	case WM_COMMAND:
-		wmId = LOWORD(wParam);
-		wmEvent = HIWORD(wParam);
-		// Parse the menu selections:
-		switch (wmId)
-		{
-		case IDM_ABOUT:
-			DialogBox(hInst, MAKEINTRESOURCE(IDD_ABOUTBOX), hWnd, About);
-			break;
-		case IDM_EXIT:
-			DestroyWindow(hWnd);
-			break;
-		default:
-			return DefWindowProc(hWnd, message, wParam, lParam);
-		}
+	case WM_POST:
 		break;
-	case WM_PAINT:
-		hdc = BeginPaint(hWnd, &ps);
-		// TODO: Add any drawing code here...
-		EndPaint(hWnd, &ps);
+	case WM_POST_THREAD:
+		break;
+	case WM_SEND:
 		break;
 	case WM_DESTROY:
 		PostQuitMessage(0);

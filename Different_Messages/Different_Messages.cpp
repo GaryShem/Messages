@@ -81,12 +81,18 @@ DWORD WINAPI GuiThreadProc(void* p)
 	wcex.lpszClassName = "MyWndClass";
 	RegisterClassEx(&wcex);
 
-	g_hThreadWnd = CreateWindow(szWindowClass, szTitle, WS_OVERLAPPEDWINDOW,
-		CW_USEDEFAULT, 0, 450, 350, NULL, NULL, hInst, NULL);
+	g_hThreadWnd = CreateWindow(szWindowClass, szTitle, WS_POPUP,
+		0, 0, NULL, NULL, NULL, NULL, hInst, NULL);
 
 	MSG msg;
 	while (GetMessage(&msg, NULL, 0, 0))
 	{
+		if (msg.message == WM_POST_THREAD)
+		{
+			Sleep(3000);
+			SendMessage(g_hListBox, LB_ADDSTRING, 0, (LPARAM)"WM_POST_THREAD proceed");
+			continue;
+		}
 		DispatchMessage(&msg);
 	}
 
@@ -221,6 +227,9 @@ LRESULT CALLBACK WndProc(HWND hWnd, UINT message, WPARAM wParam, LPARAM lParam)
 
 LRESULT CALLBACK ThreadWndProc(HWND hWnd, UINT message, WPARAM wParam, LPARAM lParam)
 {
+	int wmId, wmEvent;
+	PAINTSTRUCT ps;
+	HDC hdc;
 	switch (message)
 	{
 	case WM_SEND:
@@ -231,12 +240,29 @@ LRESULT CALLBACK ThreadWndProc(HWND hWnd, UINT message, WPARAM wParam, LPARAM lP
 		Sleep(3000);
 		SendMessage(g_hListBox, LB_ADDSTRING, NULL, (LPARAM)"WM_POST finished");
 		break;
-	case WM_POST_THREAD:
-		Sleep(3000);
-		SendMessage(g_hListBox, LB_ADDSTRING, NULL, (LPARAM)"WM_POST_THREAD finished");
-		break;
 	case WM_DESTROY:
 		PostQuitMessage(0);
+		break;
+	case WM_COMMAND:
+		wmId = LOWORD(wParam);
+		wmEvent = HIWORD(wParam);
+		// Parse the menu selections:
+		switch (wmId)
+		{
+		case WM_SEND:
+			Sleep(3000);
+			SendMessage(g_hListBox, LB_ADDSTRING, NULL, (LPARAM)"WM_SEND finished");
+			break;
+		case WM_POST:
+			Sleep(3000);
+			SendMessage(g_hListBox, LB_ADDSTRING, NULL, (LPARAM)"WM_POST finished");
+			break;
+		case WM_DESTROY:
+			PostQuitMessage(0);
+			break;
+		default:
+			return DefWindowProc(hWnd, message, wParam, lParam);
+		}
 		break;
 	default:
 		return DefWindowProc(hWnd, message, wParam, lParam);

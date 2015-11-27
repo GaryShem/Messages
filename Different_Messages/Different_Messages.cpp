@@ -19,9 +19,10 @@
 HINSTANCE hInst;								// current instance
 TCHAR szTitle[MAX_LOADSTRING];					// The title bar text
 TCHAR szWindowClass[MAX_LOADSTRING];			// the main window class name
-HANDLE g_Thread;
+HANDLE g_hThread;
+DWORD g_dThreadId;
 HWND g_hThreadWnd;
-
+HWND g_hListBox;
 
 // Forward declarations of functions included in this code module:
 ATOM				MyRegisterClass(HINSTANCE hInstance);
@@ -32,14 +33,14 @@ LRESULT CALLBACK	ThreadWndProc(HWND, UINT, WPARAM, LPARAM);
 DWORD WINAPI		GuiThreadProc(void*);
 
 int APIENTRY _tWinMain(_In_ HINSTANCE hInstance,
-                     _In_opt_ HINSTANCE hPrevInstance,
-                     _In_ LPTSTR    lpCmdLine,
-                     _In_ int       nCmdShow)
+	_In_opt_ HINSTANCE hPrevInstance,
+	_In_ LPTSTR    lpCmdLine,
+	_In_ int       nCmdShow)
 {
 	UNREFERENCED_PARAMETER(hPrevInstance);
 	UNREFERENCED_PARAMETER(lpCmdLine);
 
- 	// TODO: Place code here.
+	// TODO: Place code here.
 	MSG msg;
 	HACCEL hAccelTable;
 
@@ -49,13 +50,14 @@ int APIENTRY _tWinMain(_In_ HINSTANCE hInstance,
 	MyRegisterClass(hInstance);
 
 	// Perform application initialization:
-	if (!InitInstance (hInstance, nCmdShow))
+	if (!InitInstance(hInstance, nCmdShow))
 	{
 		return FALSE;
 	}
 
 	hAccelTable = LoadAccelerators(hInstance, MAKEINTRESOURCE(IDC_DIFFERENT_MESSAGES));
-
+	// Создаём поток для второго окна
+	g_hThread = CreateThread(NULL, 0, GuiThreadProc, NULL, 0, &g_dThreadId);
 	// Main message loop:
 	while (GetMessage(&msg, NULL, 0, 0))
 	{
@@ -65,8 +67,8 @@ int APIENTRY _tWinMain(_In_ HINSTANCE hInstance,
 			DispatchMessage(&msg);
 		}
 	}
-
-	return (int) msg.wParam;
+	ExitProcess((int)msg.wParam);
+	return (int)msg.wParam;
 }
 
 DWORD WINAPI GuiThreadProc(void* p)
@@ -79,7 +81,16 @@ DWORD WINAPI GuiThreadProc(void* p)
 	wcex.lpszClassName = "MyWndClass";
 	RegisterClassEx(&wcex);
 
-	return NULL;
+	g_hThreadWnd = CreateWindow(szWindowClass, szTitle, WS_OVERLAPPEDWINDOW,
+		CW_USEDEFAULT, 0, 450, 350, NULL, NULL, hInst, NULL);
+
+	MSG msg;
+	while (GetMessage(&msg, NULL, 0, 0))
+	{
+		DispatchMessage(&msg);
+	}
+
+	return 0;
 }
 
 //
@@ -93,17 +104,17 @@ ATOM MyRegisterClass(HINSTANCE hInstance)
 
 	wcex.cbSize = sizeof(WNDCLASSEX);
 
-	wcex.style			= CS_HREDRAW | CS_VREDRAW;
-	wcex.lpfnWndProc	= WndProc;
-	wcex.cbClsExtra		= 0;
-	wcex.cbWndExtra		= 0;
-	wcex.hInstance		= hInstance;
-	wcex.hIcon			= LoadIcon(hInstance, MAKEINTRESOURCE(IDI_DIFFERENT_MESSAGES));
-	wcex.hCursor		= LoadCursor(NULL, IDC_ARROW);
-	wcex.hbrBackground	= (HBRUSH)(COLOR_WINDOW+1);
-	wcex.lpszMenuName	= MAKEINTRESOURCE(IDC_DIFFERENT_MESSAGES);
-	wcex.lpszClassName	= szWindowClass;
-	wcex.hIconSm		= LoadIcon(wcex.hInstance, MAKEINTRESOURCE(IDI_SMALL));
+	wcex.style = CS_HREDRAW | CS_VREDRAW;
+	wcex.lpfnWndProc = WndProc;
+	wcex.cbClsExtra = 0;
+	wcex.cbWndExtra = 0;
+	wcex.hInstance = hInstance;
+	wcex.hIcon = LoadIcon(hInstance, MAKEINTRESOURCE(IDI_DIFFERENT_MESSAGES));
+	wcex.hCursor = LoadCursor(NULL, IDC_ARROW);
+	wcex.hbrBackground = (HBRUSH)(COLOR_WINDOW + 1);
+	wcex.lpszMenuName = MAKEINTRESOURCE(IDC_DIFFERENT_MESSAGES);
+	wcex.lpszClassName = szWindowClass;
+	wcex.hIconSm = LoadIcon(wcex.hInstance, MAKEINTRESOURCE(IDI_SMALL));
 
 	return RegisterClassEx(&wcex);
 }
@@ -120,34 +131,34 @@ ATOM MyRegisterClass(HINSTANCE hInstance)
 //
 BOOL InitInstance(HINSTANCE hInstance, int nCmdShow)
 {
-   HWND hWnd;
+	HWND hWnd;
 
-   hInst = hInstance; // Store instance handle in our global variable
+	hInst = hInstance; // Store instance handle in our global variable
 
-   hWnd = CreateWindow(szWindowClass, szTitle, WS_OVERLAPPEDWINDOW,
-      CW_USEDEFAULT, 0, 450, 350, NULL, NULL, hInstance, NULL);
+	hWnd = CreateWindow(szWindowClass, szTitle, WS_OVERLAPPEDWINDOW,
+		CW_USEDEFAULT, 0, 450, 350, NULL, NULL, hInstance, NULL);
 
-   CreateWindowEx(WS_EX_STATICEDGE, "BUTTON", "SendMessage", WS_CHILD | WS_VISIBLE,
-	   280, 10, 150, 25, hWnd, (HMENU)ID_BTN_SEND, hInstance, NULL);
+	CreateWindowEx(WS_EX_STATICEDGE, "BUTTON", "SendMessage", WS_CHILD | WS_VISIBLE,
+		280, 10, 150, 25, hWnd, (HMENU)ID_BTN_SEND, hInstance, NULL);
 
-   CreateWindowEx(WS_EX_STATICEDGE, "BUTTON", "PostMessage", WS_CHILD | WS_VISIBLE,
-	   280, 40, 150, 25, hWnd, (HMENU)ID_BTN_POST, hInstance, NULL);
+	CreateWindowEx(WS_EX_STATICEDGE, "BUTTON", "PostMessage", WS_CHILD | WS_VISIBLE,
+		280, 40, 150, 25, hWnd, (HMENU)ID_BTN_POST, hInstance, NULL);
 
-   CreateWindowEx(WS_EX_STATICEDGE, "BUTTON", "Post Thread Message", WS_CHILD | WS_VISIBLE,
-	   280, 70, 150, 25, hWnd, (HMENU)ID_BTN_POST_THREAD, hInstance, NULL);
+	CreateWindowEx(WS_EX_STATICEDGE, "BUTTON", "Post Thread Message", WS_CHILD | WS_VISIBLE,
+		280, 70, 150, 25, hWnd, (HMENU)ID_BTN_POST_THREAD, hInstance, NULL);
 
-   CreateWindowEx(WS_EX_STATICEDGE, "LISTBOX", "", WS_CHILD | WS_VISIBLE,
-	   10, 10, 260, 260, hWnd, (HMENU)ID_LISTBOX, hInstance, NULL);
+	g_hListBox = CreateWindowEx(WS_EX_STATICEDGE, "LISTBOX", "", WS_CHILD | WS_VISIBLE | WS_VSCROLL,
+		10, 10, 260, 260, hWnd, (HMENU)ID_LISTBOX, hInstance, NULL);
 
-   if (!hWnd)
-   {
-      return FALSE;
-   }
+	if (!hWnd)
+	{
+		return FALSE;
+	}
 
-   ShowWindow(hWnd, nCmdShow);
-   UpdateWindow(hWnd);
+	ShowWindow(hWnd, nCmdShow);
+	UpdateWindow(hWnd);
 
-   return TRUE;
+	return TRUE;
 }
 
 //
@@ -168,18 +179,22 @@ LRESULT CALLBACK WndProc(HWND hWnd, UINT message, WPARAM wParam, LPARAM lParam)
 
 	switch (message)
 	{
-	case ID_BTN_SEND:
-		break;
-	case ID_BTN_POST:
-		break;
-	case ID_BTN_POST_THREAD:
-		break;
+
 	case WM_COMMAND:
-		wmId    = LOWORD(wParam);
+		wmId = LOWORD(wParam);
 		wmEvent = HIWORD(wParam);
 		// Parse the menu selections:
 		switch (wmId)
 		{
+		case ID_BTN_SEND:
+			SendMessage(g_hThreadWnd, WM_SEND, NULL, NULL);
+			break;
+		case ID_BTN_POST:
+			PostMessage(g_hThreadWnd, WM_POST, NULL, NULL);
+			break;
+		case ID_BTN_POST_THREAD:
+			PostThreadMessage(g_dThreadId, WM_POST_THREAD, NULL, NULL);
+			break;
 		case IDM_ABOUT:
 			DialogBox(hInst, MAKEINTRESOURCE(IDD_ABOUTBOX), hWnd, About);
 			break;
@@ -206,17 +221,19 @@ LRESULT CALLBACK WndProc(HWND hWnd, UINT message, WPARAM wParam, LPARAM lParam)
 
 LRESULT CALLBACK ThreadWndProc(HWND hWnd, UINT message, WPARAM wParam, LPARAM lParam)
 {
-	int wmId, wmEvent;
-	PAINTSTRUCT ps;
-	HDC hdc;
-
 	switch (message)
 	{
+	case WM_SEND:
+		Sleep(3000);
+		SendMessage(g_hListBox, LB_ADDSTRING, NULL, (LPARAM)"WM_SEND finished");
+		break;
 	case WM_POST:
+		Sleep(3000);
+		SendMessage(g_hListBox, LB_ADDSTRING, NULL, (LPARAM)"WM_POST finished");
 		break;
 	case WM_POST_THREAD:
-		break;
-	case WM_SEND:
+		Sleep(3000);
+		SendMessage(g_hListBox, LB_ADDSTRING, NULL, (LPARAM)"WM_POST_THREAD finished");
 		break;
 	case WM_DESTROY:
 		PostQuitMessage(0);

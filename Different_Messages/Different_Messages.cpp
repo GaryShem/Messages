@@ -20,7 +20,7 @@ HINSTANCE hInst;								// current instance
 TCHAR szTitle[MAX_LOADSTRING];					// The title bar text
 TCHAR szWindowClass[MAX_LOADSTRING];			// the main window class name
 HANDLE g_hThread;
-DWORD g_dThreadId;
+DWORD g_dwThreadId;
 HWND g_hThreadWnd;
 HWND g_hListBox;
 
@@ -56,8 +56,6 @@ int APIENTRY _tWinMain(_In_ HINSTANCE hInstance,
 	}
 
 	hAccelTable = LoadAccelerators(hInstance, MAKEINTRESOURCE(IDC_DIFFERENT_MESSAGES));
-	// Создаём поток для второго окна
-	g_hThread = CreateThread(NULL, 0, GuiThreadProc, NULL, 0, &g_dThreadId);
 	// Main message loop:
 	while (GetMessage(&msg, NULL, 0, 0))
 	{
@@ -79,10 +77,10 @@ DWORD WINAPI GuiThreadProc(void* p)
 	wcex.lpfnWndProc = ThreadWndProc;
 	wcex.hInstance = hInst;
 	wcex.lpszClassName = "MyWndClass";
-	RegisterClassEx(&wcex);
+	auto retVal = RegisterClassEx(&wcex);
 
-	g_hThreadWnd = CreateWindow(szWindowClass, szTitle, WS_POPUP,
-		0, 0, NULL, NULL, NULL, NULL, hInst, NULL);
+	g_hThreadWnd = CreateWindow("MyWndClass", "", WS_POPUP,
+		0, 0, 0, 0, NULL, NULL, hInst, NULL);
 
 	MSG msg;
 	while (GetMessage(&msg, NULL, 0, 0))
@@ -142,24 +140,26 @@ BOOL InitInstance(HINSTANCE hInstance, int nCmdShow)
 	hInst = hInstance; // Store instance handle in our global variable
 
 	hWnd = CreateWindow(szWindowClass, szTitle, WS_OVERLAPPEDWINDOW,
-		CW_USEDEFAULT, 0, 450, 350, NULL, NULL, hInstance, NULL);
+		CW_USEDEFAULT, 0, 450, 350, NULL, NULL, hInst, NULL);
 
 	CreateWindowEx(WS_EX_STATICEDGE, "BUTTON", "SendMessage", WS_CHILD | WS_VISIBLE,
-		280, 10, 150, 25, hWnd, (HMENU)ID_BTN_SEND, hInstance, NULL);
+		280, 10, 150, 25, hWnd, (HMENU)ID_BTN_SEND, hInst, NULL);
 
 	CreateWindowEx(WS_EX_STATICEDGE, "BUTTON", "PostMessage", WS_CHILD | WS_VISIBLE,
-		280, 40, 150, 25, hWnd, (HMENU)ID_BTN_POST, hInstance, NULL);
+		280, 40, 150, 25, hWnd, (HMENU)ID_BTN_POST, hInst, NULL);
 
 	CreateWindowEx(WS_EX_STATICEDGE, "BUTTON", "Post Thread Message", WS_CHILD | WS_VISIBLE,
-		280, 70, 150, 25, hWnd, (HMENU)ID_BTN_POST_THREAD, hInstance, NULL);
+		280, 70, 150, 25, hWnd, (HMENU)ID_BTN_POST_THREAD, hInst, NULL);
 
 	g_hListBox = CreateWindowEx(WS_EX_STATICEDGE, "LISTBOX", "", WS_CHILD | WS_VISIBLE | WS_VSCROLL,
-		10, 10, 260, 260, hWnd, (HMENU)ID_LISTBOX, hInstance, NULL);
+		10, 10, 260, 260, hWnd, (HMENU)ID_LISTBOX, hInst, NULL);
 
 	if (!hWnd)
 	{
 		return FALSE;
 	}
+	// Создаём поток для второго окна
+	g_hThread = CreateThread(NULL, 0, GuiThreadProc, NULL, 0, &g_dwThreadId);
 
 	ShowWindow(hWnd, nCmdShow);
 	UpdateWindow(hWnd);
@@ -199,7 +199,7 @@ LRESULT CALLBACK WndProc(HWND hWnd, UINT message, WPARAM wParam, LPARAM lParam)
 			PostMessage(g_hThreadWnd, WM_POST, NULL, NULL);
 			break;
 		case ID_BTN_POST_THREAD:
-			PostThreadMessage(g_dThreadId, WM_POST_THREAD, NULL, NULL);
+			PostThreadMessage(g_dwThreadId, WM_POST_THREAD, NULL, NULL);
 			break;
 		case IDM_ABOUT:
 			DialogBox(hInst, MAKEINTRESOURCE(IDD_ABOUTBOX), hWnd, About);
@@ -227,9 +227,6 @@ LRESULT CALLBACK WndProc(HWND hWnd, UINT message, WPARAM wParam, LPARAM lParam)
 
 LRESULT CALLBACK ThreadWndProc(HWND hWnd, UINT message, WPARAM wParam, LPARAM lParam)
 {
-	int wmId, wmEvent;
-	PAINTSTRUCT ps;
-	HDC hdc;
 	switch (message)
 	{
 	case WM_SEND:
@@ -242,27 +239,6 @@ LRESULT CALLBACK ThreadWndProc(HWND hWnd, UINT message, WPARAM wParam, LPARAM lP
 		break;
 	case WM_DESTROY:
 		PostQuitMessage(0);
-		break;
-	case WM_COMMAND:
-		wmId = LOWORD(wParam);
-		wmEvent = HIWORD(wParam);
-		// Parse the menu selections:
-		switch (wmId)
-		{
-		case WM_SEND:
-			Sleep(3000);
-			SendMessage(g_hListBox, LB_ADDSTRING, NULL, (LPARAM)"WM_SEND finished");
-			break;
-		case WM_POST:
-			Sleep(3000);
-			SendMessage(g_hListBox, LB_ADDSTRING, NULL, (LPARAM)"WM_POST finished");
-			break;
-		case WM_DESTROY:
-			PostQuitMessage(0);
-			break;
-		default:
-			return DefWindowProc(hWnd, message, wParam, lParam);
-		}
 		break;
 	default:
 		return DefWindowProc(hWnd, message, wParam, lParam);
